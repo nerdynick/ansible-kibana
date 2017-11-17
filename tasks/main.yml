@@ -1,38 +1,19 @@
 ---
-- name: Create service account for Kibana
-  user: name=kibana
-        system=yes
-        home=/var/lib/kibana
-        shell=/bin/false
-        state=present
+- set_fact: use_system_d={{(ansible_distribution == 'Debian' and ansible_distribution_version | version_compare('8', '>=')) or (ansible_distribution in ['RedHat','CentOS'] and ansible_distribution_version | version_compare('7', '>=')) or (ansible_distribution == 'Ubuntu' and ansible_distribution_version | version_compare('15', '>=')) }}
+- set_fact: instance_init_script={{init_script | dirname }}/{{init_script | basename}}
+- set_fact: instance_sysd_script={{sysd_script | dirname }}/{{sysd_script | basename}}
+  when: use_system_d
 
-- name: Download Kibana
-  get_url: url=https://download.elasticsearch.org/kibana/kibana/kibana-{{ kibana_version }}-{{ kibana_os }}-{{ kibana_arch }}.zip
-           dest=/usr/local/src/kibana-{{ kibana_version }}-{{ kibana_os }}-{{ kibana_arch }}.zip
-
-- name: Extract and install Kibana
-  unarchive: src=/usr/local/src/kibana-{{ kibana_version }}-{{ kibana_os }}-{{ kibana_arch }}.zip
-             dest={{ kibana_dir }}
-             copy=no
-             creates={{ kibana_dir }}/kibana-{{ kibana_version }}-{{ kibana_os }}-{{ kibana_arch }}
+- name: Include specific Elasticsearch
+  include_tasks: kibana-Debian.yaml
+  when: ansible_os_family == 'Debian'
+- name: Include specific Elasticsearch
+  include_tasks: kibana-RedHat.yaml
+  when: ansible_os_family == 'RedHat'
 
 - name: Configure Kibana
-  template: src=kibana.yml.j2
-            dest={{ kibana_dir }}/kibana-{{ kibana_version }}-{{ kibana_os }}-{{ kibana_arch }}/config/kibana.yml
+  template: 
+    src: kibana.yml.j2
+    dest: "/etc/kibana/kibana.yml"
   notify:
-    - Restart Kibana
-
-- name: Configure Kibana service definition
-  template: src=kibana.conf.j2 dest=/etc/init/kibana.conf
-  notify:
-    - Restart Kibana
-
-- name: Touch log file if it does not exist
-  command: touch {{ kibana_log }}
-           creates={{ kibana_log }}
-
-- name: Set log file permissions
-  file: path={{ kibana_log }} owner=kibana group=kibana mode=0644
-
-- name: Configure Kibana log rotation
-  template: src=logrotate_kibana.j2 dest=/etc/logrotate.d/kibana
+    - restart kibana

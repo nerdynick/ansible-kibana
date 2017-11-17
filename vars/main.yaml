@@ -1,0 +1,4 @@
+---
+kibana_package_url: "https://artifacts.elastic.co/downloads/kibana"
+sysd_script: "/usr/lib/systemd/system/kibana.service"
+init_script: "/etc/init.d/kibana.conf"

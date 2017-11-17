@@ -1,0 +1,11 @@
+---
+- name: RedHat - add Elasticsearch repo
+  become: yes
+  template: src=elasticsearch.repo dest=/etc/yum.repos.d/elasticsearch-{{ kibana_major_version }}.repo
+
+- name: RedHat - Install Kibana {% if kibana_version is defined and kibana_version != ""  %}{{ kibana_version }}{% endif %}
+  become: yes
+  yum: name=kibana{% if kibana_version is defined and kibana_version != ""  %}-{{kibana_version}}{% endif %} state=present update_cache=yes
+  notify: restart kibana
+  retries: 5
+  delay: 10
